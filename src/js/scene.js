@@ -17,7 +17,7 @@ class GameScene {
         });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setClearColor(0x87CEEB, 1);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(1); // Force 1:1 pixel ratio
 
         // Enable shadow mapping
         this.renderer.shadowMap.enabled = true;
@@ -74,6 +74,14 @@ class GameScene {
         this.currentTarget = initialTarget.clone();
         this.currentPosition = this.camera.position.clone();
         this.zoomLevel = 1;
+
+        // Setup FPS tracking
+        this.fpsCounter = {
+            lastTime: performance.now(),
+            frames: 0,
+            current: 0,
+            updateInterval: 1000 // Update FPS display every second
+        };
     }
 
     setupLights() {
@@ -130,6 +138,7 @@ class GameScene {
 
     update(player) {
         this.updateCamera(player);
+        this.updateFPS();
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -208,5 +217,20 @@ class GameScene {
         // Update camera immediately without interpolation
         this.camera.position.copy(this.currentPosition);
         this.camera.lookAt(this.currentTarget);
+    }
+
+    updateFPS() {
+        this.fpsCounter.frames++;
+        const currentTime = performance.now();
+
+        if (currentTime > this.fpsCounter.lastTime + this.fpsCounter.updateInterval) {
+            this.fpsCounter.current = Math.round(
+                (this.fpsCounter.frames * 1000) / (currentTime - this.fpsCounter.lastTime)
+            );
+            document.getElementById('fps').textContent = `FPS: ${this.fpsCounter.current}`;
+
+            this.fpsCounter.frames = 0;
+            this.fpsCounter.lastTime = currentTime;
+        }
     }
 }
