@@ -243,10 +243,10 @@ class Player {
     handleKeyDown(event) {
         switch(event.key) {
             case 'ArrowUp':
-                this.velocity.z = GAME_CONSTANTS.PLAYER.MOVE_SPEED;
+                this.velocity.z = -GAME_CONSTANTS.PLAYER.MOVE_SPEED;
                 break;
             case 'ArrowDown':
-                this.velocity.z = -GAME_CONSTANTS.PLAYER.MOVE_SPEED;
+                this.velocity.z = GAME_CONSTANTS.PLAYER.MOVE_SPEED;
                 break;
             case 'ArrowLeft':
                 this.velocity.rotation = GAME_CONSTANTS.PLAYER.ROTATION_SPEED;

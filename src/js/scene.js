@@ -51,26 +51,28 @@ class GameScene {
         this.zoomLevel = 1;
         this.setupZoomControls();
 
-        // Initialize camera position behind where player will spawn
-        this.camera.position.set(
-            0,
-            GAME_CONSTANTS.CAMERA.OFFSET.y,
-            GAME_CONSTANTS.CAMERA.OFFSET.z
-        );
-        this.camera.lookAt(0, GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y, 0);
+        // Initialize camera position behind where player will spawn (180 degrees from current)
+        const initialAngleX = Math.sin(Math.PI); // Start rotated 180 degrees
+        const initialAngleZ = Math.cos(Math.PI);
 
-        // Initialize camera tracking variables
-        this.currentTarget = new THREE.Vector3(0, GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y, 0);
-        this.currentPosition = new THREE.Vector3(
-            0,
+        this.camera.position.set(
+            0 - (initialAngleX * GAME_CONSTANTS.CAMERA.OFFSET.z),
             GAME_CONSTANTS.CAMERA.OFFSET.y,
-            GAME_CONSTANTS.CAMERA.OFFSET.z
+            0 - (initialAngleZ * GAME_CONSTANTS.CAMERA.OFFSET.z)
         );
-        this.cameraOffset = new THREE.Vector3(
-            GAME_CONSTANTS.CAMERA.OFFSET.x,
-            GAME_CONSTANTS.CAMERA.OFFSET.y,
-            GAME_CONSTANTS.CAMERA.OFFSET.z
+
+        // Initialize look target
+        const initialTarget = new THREE.Vector3(
+            0 + (initialAngleX * GAME_CONSTANTS.CAMERA.LOOK_AHEAD),
+            GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y,
+            0 + (initialAngleZ * GAME_CONSTANTS.CAMERA.LOOK_AHEAD)
         );
+
+        this.camera.lookAt(initialTarget);
+
+        // Initialize tracking variables
+        this.currentTarget = initialTarget.clone();
+        this.currentPosition = this.camera.position.clone();
         this.zoomLevel = 1;
     }
 
@@ -185,9 +187,9 @@ class GameScene {
     updateCamera(player) {
         if (!player) return;
 
-        // Calculate angles based on player rotation (removed the negative)
-        const angleX = Math.sin(player.rotation);
-        const angleZ = Math.cos(player.rotation);
+        // Calculate angles based on player rotation (add PI to rotate 180 degrees)
+        const angleX = Math.sin(player.rotation + Math.PI);
+        const angleZ = Math.cos(player.rotation + Math.PI);
 
         // Position camera directly behind player
         this.currentPosition.set(
