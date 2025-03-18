@@ -35,7 +35,7 @@ function animate(currentTime = 0) {
         player.update(delta);
     }
 
-    gameScene.update();
+    gameScene.update(player);
 }
 
 init();
