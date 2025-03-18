@@ -2,12 +2,29 @@ class Player {
     constructor(type = 'george') {
         this.type = type;
         this.mesh = this.createPlayerMesh();
-        this.position = { x: 0, y: GAME_CONSTANTS.PLAYER.HEIGHT / 2, z: 0 };
-        this.velocity = { x: 0, y: 0 };
+
+        // Set initial position at origin, on the ground
+        this.position = {
+            x: 0,
+            y: GAME_CONSTANTS.PLAYER.HEIGHT / 2, // Half height so feet touch ground
+            z: 0
+        };
+
+        this.velocity = { x: 0, y: 0, z: 0, rotation: 0 };
+        this.direction = 1;
         this.isJumping = false;
         this.isClimbing = false;
         this.health = GAME_CONSTANTS.PLAYER.MAX_HEALTH;
-        this.direction = 1; // 1 for right, -1 for left
+        this.rotation = 0; // Current rotation angle
+        this.moveDirection = new THREE.Vector3(); // Movement direction vector
+
+        // Apply initial position to mesh
+        this.mesh.position.set(
+            this.position.x,
+            this.position.y,
+            this.position.z
+        );
+
         this.setupControls();
     }
 
@@ -225,25 +242,19 @@ class Player {
 
     handleKeyDown(event) {
         switch(event.key) {
-            case 'ArrowLeft':
-                this.velocity.x = -GAME_CONSTANTS.PLAYER.SPEED;
-                this.direction = -1;
-                break;
-            case 'ArrowRight':
-                this.velocity.x = GAME_CONSTANTS.PLAYER.SPEED;
-                this.direction = 1;
-                break;
             case 'ArrowUp':
-                if (this.isClimbing) {
-                    this.velocity.y = GAME_CONSTANTS.PLAYER.SPEED;
-                }
+                this.velocity.z = GAME_CONSTANTS.PLAYER.MOVE_SPEED;
                 break;
             case 'ArrowDown':
-                if (this.isClimbing) {
-                    this.velocity.y = -GAME_CONSTANTS.PLAYER.SPEED;
-                }
+                this.velocity.z = -GAME_CONSTANTS.PLAYER.MOVE_SPEED;
                 break;
-            case ' ': // Spacebar
+            case 'ArrowLeft':
+                this.velocity.rotation = GAME_CONSTANTS.PLAYER.ROTATION_SPEED;
+                break;
+            case 'ArrowRight':
+                this.velocity.rotation = -GAME_CONSTANTS.PLAYER.ROTATION_SPEED;
+                break;
+            case ' ':
                 this.jump();
                 break;
         }
@@ -251,15 +262,13 @@ class Player {
 
     handleKeyUp(event) {
         switch(event.key) {
-            case 'ArrowLeft':
-            case 'ArrowRight':
-                this.velocity.x = 0;
-                break;
             case 'ArrowUp':
             case 'ArrowDown':
-                if (this.isClimbing) {
-                    this.velocity.y = 0;
-                }
+                this.velocity.z = 0;
+                break;
+            case 'ArrowLeft':
+            case 'ArrowRight':
+                this.velocity.rotation = 0;
                 break;
         }
     }
@@ -272,20 +281,35 @@ class Player {
     }
 
     update(delta) {
+        // Update rotation
+        this.rotation += this.velocity.rotation * delta;
+
+        // Calculate movement based on rotation
+        this.moveDirection.set(0, 0, this.velocity.z);
+        this.moveDirection.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
+
+        // Update position
+        this.position.x += this.moveDirection.x * delta;
+        this.position.z += this.moveDirection.z * delta;
+
         // Apply gravity if not climbing
         if (!this.isClimbing) {
             this.velocity.y -= 0.01 * delta; // Gravity
         }
 
         // Update position
-        this.position.x += this.velocity.x * delta;
-        this.position.y += this.velocity.y * delta;
+        this.position.y = Math.max(
+            GAME_CONSTANTS.PLAYER.HEIGHT / 2, // Don't go below ground
+            this.position.y + this.velocity.y * delta
+        );
 
-        // Update mesh position
-        this.mesh.position.set(this.position.x, this.position.y, this.position.z);
-
-        // Update mesh rotation based on direction
-        this.mesh.rotation.y = this.direction > 0 ? 0 : Math.PI;
+        // Update mesh position and rotation
+        this.mesh.position.set(
+            this.position.x,
+            this.position.y,
+            this.position.z
+        );
+        this.mesh.rotation.y = this.rotation;
 
         // Ground collision (temporary)
         if (this.position.y < 0) {

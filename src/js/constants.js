@@ -14,7 +14,9 @@ const GAME_CONSTANTS = {
         JUMP_FORCE: 0.8,
         MAX_HEALTH: 100,
         SCALE: 1.5,
-        INITIAL_Y: 8 // Starting height off the ground
+        INITIAL_Y: 8, // Starting height off the ground
+        ROTATION_SPEED: 0.002,  // Much slower rotation
+        MOVE_SPEED: 0.5      // Speed of forward/backward movement
     },
     CAMERA: {
         FOV: 60,
@@ -22,22 +24,29 @@ const GAME_CONSTANTS = {
         FAR: 1000,
         OFFSET: {
             x: 0,
-            y: 15,
-            z: 30  // This is our default/closest zoom
+            y: 30,
+            z: 60
         },
         ZOOM: {
             SPEED: 2,
-            MIN_MULTIPLIER: 1,    // Closest zoom (default position)
-            MAX_MULTIPLIER: 3     // Furthest zoom (3x further than default)
+            MIN_MULTIPLIER: 0.5,  // Allows zooming in to original close position
+            MAX_MULTIPLIER: 2     // Allows zooming out to 2x the new default position
         },
         LOOK_OFFSET: {
             x: 0,
             y: 5,
             z: 0
-        }
+        },
+        LERP_FACTOR: 0.1,    // Increased for more responsive camera movement
+        LOOK_AHEAD: 20  // Distance to look ahead of player
     },
     GRID: {
         SIZE: 100,
         DIVISIONS: 10
+    },
+    WORLD: {
+        SIZE: 500,            // Size of the game plane
+        BUILDING_SPREAD: 150, // How far buildings can spawn from center
+        BUILDING_COUNT: 20    // Number of buildings to create
     }
 };

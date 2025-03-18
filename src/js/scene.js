@@ -50,6 +50,28 @@ class GameScene {
 
         this.zoomLevel = 1;
         this.setupZoomControls();
+
+        // Initialize camera position behind where player will spawn
+        this.camera.position.set(
+            0,
+            GAME_CONSTANTS.CAMERA.OFFSET.y,
+            GAME_CONSTANTS.CAMERA.OFFSET.z
+        );
+        this.camera.lookAt(0, GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y, 0);
+
+        // Initialize camera tracking variables
+        this.currentTarget = new THREE.Vector3(0, GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y, 0);
+        this.currentPosition = new THREE.Vector3(
+            0,
+            GAME_CONSTANTS.CAMERA.OFFSET.y,
+            GAME_CONSTANTS.CAMERA.OFFSET.z
+        );
+        this.cameraOffset = new THREE.Vector3(
+            GAME_CONSTANTS.CAMERA.OFFSET.x,
+            GAME_CONSTANTS.CAMERA.OFFSET.y,
+            GAME_CONSTANTS.CAMERA.OFFSET.z
+        );
+        this.zoomLevel = 1;
     }
 
     setupLights() {
@@ -163,26 +185,26 @@ class GameScene {
     updateCamera(player) {
         if (!player) return;
 
-        // Calculate target position (where camera looks at)
-        this.currentTarget.set(
-            player.position.x + GAME_CONSTANTS.CAMERA.LOOK_OFFSET.x,
-            player.position.y + GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y,
-            player.position.z + GAME_CONSTANTS.CAMERA.LOOK_OFFSET.z
-        );
+        // Calculate angles based on player rotation (removed the negative)
+        const angleX = Math.sin(player.rotation);
+        const angleZ = Math.cos(player.rotation);
 
-        // Calculate camera position with zoom
-        const offsetX = this.cameraOffset.x * player.direction;
-        const offsetZ = this.cameraOffset.z * this.zoomLevel * player.direction;
-        const offsetY = this.cameraOffset.y * this.zoomLevel;
-
+        // Position camera directly behind player
         this.currentPosition.set(
-            player.position.x - offsetX,
-            player.position.y + offsetY,
-            player.position.z - offsetZ
+            player.position.x - (angleX * GAME_CONSTANTS.CAMERA.OFFSET.z * this.zoomLevel),
+            player.position.y + GAME_CONSTANTS.CAMERA.OFFSET.y * this.zoomLevel,
+            player.position.z - (angleZ * GAME_CONSTANTS.CAMERA.OFFSET.z * this.zoomLevel)
         );
 
-        // Update camera position and look at
-        this.camera.position.lerp(this.currentPosition, 0.1);
+        // Look ahead of player
+        this.currentTarget.set(
+            player.position.x + (angleX * GAME_CONSTANTS.CAMERA.LOOK_AHEAD),
+            player.position.y + GAME_CONSTANTS.CAMERA.LOOK_OFFSET.y,
+            player.position.z + (angleZ * GAME_CONSTANTS.CAMERA.LOOK_AHEAD)
+        );
+
+        // Update camera immediately without interpolation
+        this.camera.position.copy(this.currentPosition);
         this.camera.lookAt(this.currentTarget);
     }
 }
