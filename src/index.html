@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rampage Three.js</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Load Three.js first -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Load constants and utility classes first -->
+    <script src="js/constants.js"></script>
+    <!-- Load game components -->
+    <script src="js/modal.js"></script>
+    <script src="js/scene.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/building.js"></script>
+    <script src="js/game.js"></script>
+    <!-- Load main initialization last -->
+    <script src="js/main.js" defer></script>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="ui-overlay">
+        <div id="score">Score: 0</div>
+        <div id="health">Health: 100%</div>
+    </div>
+    <div id="welcome-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h1>Welcome to Rampage!</h1>
+            <p>Choose your monster:</p>
+            <div id="character-select">
+                <button data-monster="george">George (Gorilla)</button>
+                <button data-monster="lizzie">Lizzie (Lizard)</button>
+                <button data-monster="ralph">Ralph (Wolf)</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
