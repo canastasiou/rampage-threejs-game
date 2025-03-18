@@ -2,26 +2,43 @@ class GameScene {
     constructor() {
         this.scene = new THREE.Scene();
 
-        // Update camera settings
+        // Initialize camera
         this.camera = new THREE.PerspectiveCamera(
-            60, // Lower FOV for better depth perception
+            GAME_CONSTANTS.CAMERA.FOV,
             window.innerWidth / window.innerHeight,
-            0.1,
-            1000
+            GAME_CONSTANTS.CAMERA.NEAR,
+            GAME_CONSTANTS.CAMERA.FAR
         );
 
-        // Create renderer with proper settings
+        // Optimize renderer for GPU usage
         this.renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true
+            powerPreference: "high-performance",
+            antialias: false,
+            stencil: false,
+            depth: true,
+            alpha: false
         });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x87CEEB, 1);
-        this.renderer.setPixelRatio(1); // Force 1:1 pixel ratio
 
-        // Enable shadow mapping
+        // Force GPU rendering settings
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(1); // Force 1:1 pixel ratio
+        this.renderer.setClearColor(0x87CEEB);
+
+        // Optimize shadow settings
         this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.type = THREE.BasicShadowMap;
+        this.renderer.shadowMap.autoUpdate = false;
+
+        // Disable CPU-intensive features
+        this.renderer.physicallyCorrectLights = false;
+        this.renderer.toneMappingExposure = 1;
+        this.renderer.toneMapping = THREE.NoToneMapping;
+        this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+
+        // Enable culling and depth testing
+        this.renderer.sortObjects = false;
+        this.scene.matrixWorldAutoUpdate = false;
+        this.scene.autoUpdate = false;
 
         document.getElementById('game-container').appendChild(this.renderer.domElement);
 
@@ -82,36 +99,40 @@ class GameScene {
             current: 0,
             updateInterval: 1000 // Update FPS display every second
         };
+
+        // Create frustum for culling calculations
+        this.frustum = new THREE.Frustum();
+        this.projScreenMatrix = new THREE.Matrix4();
+
+        // Disable automatic frustum culling
+        this.scene.traverse(object => {
+            if (object.isMesh) {
+                object.frustumCulled = false;
+            }
+        });
     }
 
     setupLights() {
-        // Ambient light for overall scene brightness
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
 
-        // Main directional light with shadows
-        const mainLight = new THREE.DirectionalLight(0xffffff, 1);
-        mainLight.position.set(-10, 50, 30);
-        mainLight.castShadow = true;
+        // Optimize directional light
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(-50, 100, 50);
 
-        // Adjust shadow properties
-        mainLight.shadow.camera.left = -50;
-        mainLight.shadow.camera.right = 50;
-        mainLight.shadow.camera.top = 50;
-        mainLight.shadow.camera.bottom = -50;
-        mainLight.shadow.camera.near = 0.1;
-        mainLight.shadow.camera.far = 200;
-        mainLight.shadow.mapSize.width = 2048;
-        mainLight.shadow.mapSize.height = 2048;
+        // Optimize shadow camera
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 200;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        directionalLight.shadow.bias = -0.001;
 
-        this.scene.add(mainLight);
-
-        // Additional fill light
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
-        fillLight.position.set(10, 20, -30);
-        this.scene.add(fillLight);
+        this.scene.add(directionalLight);
     }
-
 
     setupGround() {
         const groundGeometry = new THREE.PlaneGeometry(200, 200);
@@ -137,9 +158,27 @@ class GameScene {
     }
 
     update(player) {
-        this.updateCamera(player);
-        this.updateFPS();
+        if (player) {
+            // Update only necessary matrices
+            player.mesh.updateMatrix();
+            this.updateCamera(player);
+            this.updateFrustumCulling();
+        }
+
+        // Manual matrix updates
+        this.camera.updateMatrixWorld();
+        this.scene.updateMatrixWorld();
+
+        // Update shadows only when needed
+        if (this.shadowsNeedUpdate) {
+            this.renderer.shadowMap.needsUpdate = true;
+            this.shadowsNeedUpdate = false;
+        }
+
+        // Render with optimized settings
         this.renderer.render(this.scene, this.camera);
+
+        this.updateFPS();
     }
 
     setupControls() {
@@ -232,5 +271,46 @@ class GameScene {
             this.fpsCounter.frames = 0;
             this.fpsCounter.lastTime = currentTime;
         }
+    }
+
+    updateFrustumCulling() {
+        this.projScreenMatrix.multiplyMatrices(
+            this.camera.projectionMatrix,
+            this.camera.matrixWorldInverse
+        );
+        this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
+
+        const viewDistance = GAME_CONSTANTS.RENDERER.PERFORMANCE.VIEW_DISTANCE;
+        const buildingPositions = Building.instancedMesh.instanceMatrix.array;
+
+        // Expand frustum boundaries
+        const expandedFrustum = new THREE.Frustum();
+        const expandedMatrix = this.projScreenMatrix.clone();
+        expandedMatrix.elements[0] *= 0.8;  // Widen frustum
+        expandedMatrix.elements[5] *= 0.8;  // Increase height
+        expandedFrustum.setFromProjectionMatrix(expandedMatrix);
+
+        for (let i = 0; i < GAME_CONSTANTS.WORLD.BUILDING_COUNT; i++) {
+            const idx = i * 16;
+            const position = new THREE.Vector3(
+                buildingPositions[idx + 12],
+                buildingPositions[idx + 13],
+                buildingPositions[idx + 14]
+            );
+
+            // Check distance and expanded frustum
+            const inRange = position.distanceTo(this.camera.position) < viewDistance;
+            const inFrustum = this.frustum.containsPoint(position);
+            const inExpandedFrustum = expandedFrustum.containsPoint(position);
+
+            // Keep building visible if it's in main frustum or expanded frustum
+            if (!inRange || (!inFrustum && !inExpandedFrustum)) {
+                Building.instancedMesh.setColorAt(i, new THREE.Color(0x808080).multiplyScalar(0.5));
+            } else {
+                Building.instancedMesh.setColorAt(i, new THREE.Color(0x808080));
+            }
+        }
+
+        Building.instancedMesh.instanceColor.needsUpdate = true;
     }
 }

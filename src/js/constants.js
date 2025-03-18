@@ -19,7 +19,7 @@ const GAME_CONSTANTS = {
         MOVE_SPEED: 0.5      // Speed of forward/backward movement
     },
     CAMERA: {
-        FOV: 60,
+        FOV: 75,              // Increased field of view
         NEAR: 0.1,
         FAR: 1000,
         OFFSET: {
@@ -48,5 +48,17 @@ const GAME_CONSTANTS = {
         SIZE: 500,            // Size of the game plane
         BUILDING_SPREAD: 150, // How far buildings can spawn from center
         BUILDING_COUNT: 20    // Number of buildings to create
+    },
+    RENDERER: {
+        SHADOW_MAP_SIZE: 512,  // Reduced for better performance
+        MAX_LIGHTS: 2,
+        BATCH_SIZE: 100,
+        PERFORMANCE: {
+            UPDATE_INTERVAL: 16,  // ~60fps
+            SHADOW_UPDATE_INTERVAL: 500,  // Update shadows every 500ms
+            FRUSTUM_CULLING_MARGIN: 1.5,
+            FRUSTUM_MARGIN: 2.0,    // Increased margin for smoother culling
+            VIEW_DISTANCE: 300      // Maximum distance to render buildings
+        }
     }
 };

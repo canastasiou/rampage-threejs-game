@@ -7,6 +7,10 @@ class Game {
     }
 
     init() {
+        // Initialize instanced mesh for buildings
+        const buildingMesh = Building.initializeInstancedMesh(GAME_CONSTANTS.WORLD.BUILDING_COUNT);
+        gameScene.scene.add(buildingMesh);
+
         // Create buildings in random positions
         for (let i = 0; i < GAME_CONSTANTS.WORLD.BUILDING_COUNT; i++) {
             const x = (Math.random() - 0.5) * GAME_CONSTANTS.WORLD.BUILDING_SPREAD * 2;
@@ -17,13 +21,15 @@ class Game {
 
             const building = new Building(x, height, z);
             this.buildings.push(building);
-            gameScene.scene.add(building.mesh);
+            building.updateMatrix(i);
         }
 
-        // Create larger ground plane
+        // Create optimized ground plane
         const groundGeometry = new THREE.PlaneGeometry(
             GAME_CONSTANTS.WORLD.SIZE,
-            GAME_CONSTANTS.WORLD.SIZE
+            GAME_CONSTANTS.WORLD.SIZE,
+            1,  // Reduced segment count
+            1   // Reduced segment count
         );
         const groundMaterial = new THREE.MeshPhongMaterial({
             color: 0x404040,
