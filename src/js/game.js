@@ -40,6 +40,33 @@ class Game {
         this.ground.rotation.x = -Math.PI / 2;
         this.ground.receiveShadow = true;
         gameScene.scene.add(this.ground);
+
+        this.setupGameLoop();
+    }
+
+    setupGameLoop() {
+        // Check win/lose conditions
+        setInterval(() => {
+            if (this.buildings.filter(b => b.health > 0).length === 0) {
+                this.gameWin();
+            }
+        }, 1000);
+    }
+
+    gameWin() {
+        if (!this.isGameOver) {
+            this.isGameOver = true;
+            alert(`You won! Final score: ${this.score}`);
+            location.reload();
+        }
+    }
+
+    gameLose() {
+        if (!this.isGameOver) {
+            this.isGameOver = true;
+            alert(`Game Over! Score: ${this.score}`);
+            location.reload();
+        }
     }
 
     updateScore(points) {

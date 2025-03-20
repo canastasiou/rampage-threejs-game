@@ -27,6 +27,14 @@ const GAME_CONSTANTS = {
         CLIMBING_SPEED: 0.3,
         GRAVITY: 0.008,      // Reduced from 0.02 for slower fall
         JUMP_DURATION: 800,  // New constant for jump timing (milliseconds)
+        COLLISION_MARGIN: 0.1,  // Small margin to prevent floating point issues
+        COLLISION: {
+            BOX_WIDTH: 10,      // Slightly wider than player model
+            BOX_HEIGHT: 16,     // Same as player height
+            BOX_DEPTH: 8,       // Slightly deeper than player model
+            DETECTION_MARGIN: 1, // Extra margin for collision detection
+            DEBUG: true         // Show collision boxes (for development)
+        },
     },
     CAMERA: {
         FOV: 75,              // Increased field of view

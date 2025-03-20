@@ -1,5 +1,6 @@
 class Building {
     static initializeInstancedMesh(count) {
+        // Initialize geometry if not exists
         if (!Building.geometry) {
             Building.geometry = new THREE.BoxGeometry(
                 GAME_CONSTANTS.BUILDING.WIDTH,
@@ -8,16 +9,16 @@ class Building {
             );
         }
 
+        // Initialize material if not exists
         if (!Building.material) {
             Building.material = new THREE.MeshPhongMaterial({
                 color: 0x808080,
-                flatShading: true,
-                vertexColors: false,
-                fog: false,
-                specular: 0x000000,
-                shininess: 0
+                flatShading: true
             });
         }
+
+        // Initialize dummy object for matrix calculations
+        Building.dummy = new THREE.Object3D();
 
         // Create instanced mesh
         Building.instancedMesh = new THREE.InstancedMesh(
@@ -26,14 +27,13 @@ class Building {
             count
         );
 
-        // Setup transform matrix for each instance
-        Building.dummy = new THREE.Object3D();
-        Building.matrix = new THREE.Matrix4();
-
         Building.instancedMesh.castShadow = true;
         Building.instancedMesh.receiveShadow = true;
-        Building.instancedMesh.frustumCulled = true;
 
+        return Building.instancedMesh;
+    }
+
+    static getInstancedMesh() {
         return Building.instancedMesh;
     }
 
