@@ -4,6 +4,7 @@ class Game {
         this.buildings = [];
         this.enemies = [];
         this.isGameOver = false;
+        window.gameInstance = this;  // Make game instance globally accessible
     }
 
     init() {
@@ -19,7 +20,7 @@ class Game {
                 (GAME_CONSTANTS.BUILDING.MAX_HEIGHT - GAME_CONSTANTS.BUILDING.MIN_HEIGHT) +
                 GAME_CONSTANTS.BUILDING.MIN_HEIGHT;
 
-            const building = new Building(x, height, z);
+            const building = new Building(x, height, z, i);  // Pass index as last parameter
             this.buildings.push(building);
             building.updateMatrix(i);
         }

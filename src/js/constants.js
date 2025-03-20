@@ -4,19 +4,29 @@ const GAME_CONSTANTS = {
         MAX_HEIGHT: 60,
         WIDTH: 20,
         DEPTH: 20,
-        SEGMENTS: 6
+        SEGMENTS: 6,
+        MAX_HEALTH: 100,
+        SECTIONS: 5,  // Number of destructible sections
+        DEBRIS_COUNT: 15,
+        DAMAGE_POINTS: 10
     },
     PLAYER: {
         HEIGHT: 16,
         WIDTH: 8,
         DEPTH: 6,
         SPEED: 0.3,
-        JUMP_FORCE: 0.8,
+        JUMP_FORCE: 1.4,     // Increased from 1.2 for higher jumps
         MAX_HEALTH: 100,
         SCALE: 1.5,
         INITIAL_Y: 8, // Starting height off the ground
         ROTATION_SPEED: 0.002,  // Much slower rotation
-        MOVE_SPEED: 0.5      // Speed of forward/backward movement
+        MOVE_SPEED: 0.5,      // Speed of forward/backward movement
+        ATTACK_DAMAGE: 20,
+        ATTACK_RANGE: 15,
+        ATTACK_COOLDOWN: 1000, // milliseconds
+        CLIMBING_SPEED: 0.3,
+        GRAVITY: 0.008,      // Reduced from 0.02 for slower fall
+        JUMP_DURATION: 800,  // New constant for jump timing (milliseconds)
     },
     CAMERA: {
         FOV: 75,              // Increased field of view
@@ -59,6 +69,12 @@ const GAME_CONSTANTS = {
             FRUSTUM_CULLING_MARGIN: 1.5,
             FRUSTUM_MARGIN: 2.0,    // Increased margin for smoother culling
             VIEW_DISTANCE: 300      // Maximum distance to render buildings
+        }
+    },
+    GAME: {
+        SCORE: {
+            BUILDING_DESTROY: 1000,
+            DAMAGE_BONUS: 100
         }
     }
 };

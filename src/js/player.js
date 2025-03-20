@@ -17,6 +17,8 @@ class Player {
         this.health = GAME_CONSTANTS.PLAYER.MAX_HEALTH;
         this.rotation = 0; // Current rotation angle
         this.moveDirection = new THREE.Vector3(); // Movement direction vector
+        this.attackCooldown = 0;
+        this.isAttacking = false;
 
         // Apply initial position to mesh
         this.mesh.position.set(
@@ -258,6 +260,9 @@ class Player {
             case ' ':
                 this.jump();
                 break;
+            case 'f':
+                this.attack();
+                break;
         }
     }
 
@@ -275,10 +280,78 @@ class Player {
     }
 
     jump() {
-        if (!this.isJumping && !this.isClimbing) {
+        if (!this.isJumping && !this.isClimbing && this.position.y <= GAME_CONSTANTS.PLAYER.HEIGHT) {
             this.isJumping = true;
+            this.jumpStartTime = performance.now();
             this.velocity.y = GAME_CONSTANTS.PLAYER.JUMP_FORCE;
         }
+    }
+
+    attack() {
+        if (this.attackCooldown > 0) return;
+
+        this.isAttacking = true;
+        this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN;
+
+        // Check for nearby buildings
+        const hitBox = new THREE.Box3().setFromObject(this.mesh);
+        hitBox.expandByScalar(GAME_CONSTANTS.PLAYER.ATTACK_RANGE);
+
+        // Find buildings in range and damage them
+        const buildingsHit = this.checkBuildingCollisions(hitBox);
+        buildingsHit.forEach(building => {
+            building.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK_DAMAGE, this.position);
+        });
+
+        // Reset attack state after cooldown
+        setTimeout(() => {
+            this.isAttacking = false;
+            this.attackCooldown = 0;
+        }, GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN);
+    }
+
+    checkBuildingCollisions(hitBox) {
+        const buildings = [];
+        const buildingsInScene = this.getBuildingsFromScene();
+
+        buildingsInScene.forEach(building => {
+            if (building && building.instancedMesh) {
+                // For instanced meshes, we need to calculate the world position
+                const position = new THREE.Vector3();
+                const scale = new THREE.Vector3();
+                const matrix = new THREE.Matrix4();
+
+                // Get the instance matrix for this building
+                building.instancedMesh.getMatrixAt(building.index, matrix);
+                matrix.decompose(position, new THREE.Quaternion(), scale);
+
+                // Create a box for this building instance
+                const buildingBox = new THREE.Box3();
+                buildingBox.setFromCenterAndSize(
+                    position,
+                    new THREE.Vector3(
+                        GAME_CONSTANTS.BUILDING.WIDTH * scale.x,
+                        building.height * scale.y,
+                        GAME_CONSTANTS.BUILDING.DEPTH * scale.z
+                    )
+                );
+
+                if (hitBox.intersectsBox(buildingBox)) {
+                    buildings.push(building);
+                }
+            }
+        });
+
+        return buildings;
+    }
+
+    getBuildingsFromScene() {
+        // This method needs to be connected to your game's building management
+        // You can either:
+        // 1. Pass buildings array to player
+        // 2. Use a game state manager
+        // 3. Use scene traversal (less efficient)
+        return window.gameInstance.buildings || [];
     }
 
     update(delta) {
@@ -293,16 +366,28 @@ class Player {
         this.position.x += this.moveDirection.x * delta;
         this.position.z += this.moveDirection.z * delta;
 
-        // Apply gravity if not climbing
+        // Apply gravity with smoother acceleration
         if (!this.isClimbing) {
-            this.velocity.y -= 0.01 * delta; // Gravity
+            const currentTime = performance.now();
+            const jumpTime = currentTime - this.jumpStartTime;
+
+            // Apply gravity gradually
+            if (this.isJumping) {
+                this.velocity.y -= GAME_CONSTANTS.PLAYER.GRAVITY * delta;
+            }
         }
 
-        // Update position
-        this.position.y = Math.max(
-            GAME_CONSTANTS.PLAYER.HEIGHT, // Changed from HEIGHT/2 to HEIGHT
-            this.position.y + this.velocity.y * delta
-        );
+        // Update Y position with smoothing
+        const nextY = this.position.y + this.velocity.y * delta;
+
+        // Ground collision check
+        if (nextY <= GAME_CONSTANTS.PLAYER.HEIGHT) {
+            this.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;
+            this.velocity.y = 0;
+            this.isJumping = false;
+        } else {
+            this.position.y = nextY;
+        }
 
         // Update mesh position and rotation
         this.mesh.position.set(

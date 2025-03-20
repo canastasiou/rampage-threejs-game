@@ -37,7 +37,7 @@ class Building {
         return Building.instancedMesh;
     }
 
-    constructor(x = 0, height = GAME_CONSTANTS.BUILDING.MAX_HEIGHT, z = 0) {
+    constructor(x = 0, height = GAME_CONSTANTS.BUILDING.MAX_HEIGHT, z = 0, index) {
         this.position = new THREE.Vector3(x, height/2, z);
         this.height = height;
         this.scale = new THREE.Vector3(
@@ -45,6 +45,10 @@ class Building {
             height/GAME_CONSTANTS.BUILDING.MAX_HEIGHT,
             1
         );
+        this.health = GAME_CONSTANTS.BUILDING.MAX_HEALTH;
+        this.damaged = false;
+        this.sections = [];
+        this.index = index;  // Store the instance index
     }
 
     updateMatrix(index) {
@@ -57,5 +61,29 @@ class Building {
         if (index === GAME_CONSTANTS.WORLD.BUILDING_COUNT - 1) {
             Building.instancedMesh.instanceMatrix.needsUpdate = true;
         }
+    }
+
+    takeDamage(amount, hitPoint) {
+        this.health -= amount;
+        if (this.health <= 0) {
+            return this.destroy();
+        }
+        this.showDamage(hitPoint);
+    }
+
+    showDamage(hitPoint) {
+        // Create damage effect (cracks, broken windows)
+        const damageMarker = new THREE.Mesh(
+            new THREE.SphereGeometry(2),
+            new THREE.MeshBasicMaterial({ color: 0x000000 })
+        );
+        damageMarker.position.copy(hitPoint);
+        this.mesh.add(damageMarker);
+    }
+
+    destroy() {
+        // Add destruction animation and debris
+        this.createDebris();
+        return true; // Building destroyed
     }
 }
