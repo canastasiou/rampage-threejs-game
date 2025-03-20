@@ -6,7 +6,7 @@ class Player {
         // Set initial position at origin, on the ground
         this.position = {
             x: 0,
-            y: GAME_CONSTANTS.PLAYER.HEIGHT / 2, // Half height so feet touch ground
+            y: GAME_CONSTANTS.PLAYER.HEIGHT, // Changed from HEIGHT/2 to HEIGHT
             z: 0
         };
 
@@ -96,7 +96,8 @@ class Player {
         // Face features
         this.addFaceFeatures(head);
 
-        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT / 2;
+        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
+        group.rotation.y = Math.PI; // Rotate 180 degrees
         group.castShadow = true;
 
         return group;
@@ -139,7 +140,7 @@ class Player {
         rightArm.position.set(4, 2, 0);
         group.add(rightArm);
 
-        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT / 2;
+        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
         group.castShadow = true;
 
         return group;
@@ -198,7 +199,7 @@ class Player {
         rightLeg.position.set(2, -9, 0);
         group.add(rightLeg);
 
-        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT / 2;
+        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
         group.castShadow = true;
 
         return group;
@@ -210,11 +211,11 @@ class Player {
         const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFFFF });
 
         const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-        leftEye.position.set(-1.5, 1, 3);
+        leftEye.position.set(-1.5, 1, -3); // Changed Z from 3 to -3
         head.add(leftEye);
 
         const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-        rightEye.position.set(1.5, 1, 3);
+        rightEye.position.set(1.5, 1, -3); // Changed Z from 3 to -3
         head.add(rightEye);
 
         // Mouth
@@ -222,7 +223,7 @@ class Player {
             new THREE.BoxGeometry(3, 1, 1),
             new THREE.MeshPhongMaterial({ color: 0x000000 })
         );
-        mouth.position.set(0, -1, 3);
+        mouth.position.set(0, -1, -3); // Changed Z from 3 to -3
         head.add(mouth);
     }
 
@@ -299,7 +300,7 @@ class Player {
 
         // Update position
         this.position.y = Math.max(
-            GAME_CONSTANTS.PLAYER.HEIGHT / 2, // Don't go below ground
+            GAME_CONSTANTS.PLAYER.HEIGHT, // Changed from HEIGHT/2 to HEIGHT
             this.position.y + this.velocity.y * delta
         );
 
