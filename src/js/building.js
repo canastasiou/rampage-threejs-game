@@ -49,6 +49,13 @@ class Building {
         this.damaged = false;
         this.sections = [];
         this.index = index;  // Store the instance index
+
+        // Generate random dark color
+        this.color = new THREE.Color().setHSL(
+            Math.random(),          // Random hue
+            0.5,                    // Medium saturation
+            0.2 + Math.random() * 0.2  // Dark luminance (0.2-0.4)
+        );
     }
 
     updateMatrix(index) {
@@ -57,9 +64,11 @@ class Building {
         Building.dummy.updateMatrix();
 
         Building.instancedMesh.setMatrixAt(index, Building.dummy.matrix);
+        Building.instancedMesh.setColorAt(index, this.color);
 
         if (index === GAME_CONSTANTS.WORLD.BUILDING_COUNT - 1) {
             Building.instancedMesh.instanceMatrix.needsUpdate = true;
+            Building.instancedMesh.instanceColor.needsUpdate = true;
         }
     }
 
@@ -71,10 +80,9 @@ class Building {
         Building.instancedMesh.setColorAt(this.index, damageColor);
         Building.instancedMesh.instanceColor.needsUpdate = true;
 
-        // Reset color after a short delay
+        // Reset to building's original color after damage
         setTimeout(() => {
-            const normalColor = new THREE.Color(0x808080);
-            Building.instancedMesh.setColorAt(this.index, normalColor);
+            Building.instancedMesh.setColorAt(this.index, this.color);
             Building.instancedMesh.instanceColor.needsUpdate = true;
         }, 200);
 
