@@ -12,7 +12,6 @@ class Player {
 
         this.velocity = { x: 0, y: 0, z: 0, rotation: 0 };
         this.direction = 1;
-        this.isJumping = false;
         this.isClimbing = false;
         this.health = GAME_CONSTANTS.PLAYER.MAX_HEALTH;
         this.rotation = 0; // Current rotation angle
@@ -259,9 +258,6 @@ class Player {
             case 'ArrowDown':
                 this.velocity.z = 1;
                 break;
-            case ' ': // Space
-                this.jump();
-                break;
             case 'f':
                 this.attack();
                 break;
@@ -300,14 +296,6 @@ class Player {
                     this.velocity.y = 0;
                 }
                 break;
-        }
-    }
-
-    jump() {
-        if (!this.isJumping && !this.isClimbing &&
-            this.position.y <= GAME_CONSTANTS.PLAYER.HEIGHT) {
-            this.isJumping = true;
-            this.velocity.y = GAME_CONSTANTS.PLAYER.JUMP_FORCE;
         }
     }
 
@@ -446,73 +434,77 @@ class Player {
     }
 
     update(delta) {
-        // Store current position
-        this.lastSafePosition = new THREE.Vector3(
-            this.position.x,
-            this.position.y,
-            this.position.z
-        );
+        // Store current position for collision check
+        const previousPosition = {
+            x: this.position.x,
+            y: this.position.y,
+            z: this.position.z
+        };
 
-        // Update rotation first
+        // Update rotation
         this.rotation += this.velocity.rotation * delta;
 
         // Calculate movement
         const moveVector = new THREE.Vector3(0, 0, this.velocity.z);
         moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
 
-        // Update position temporarily
+        // Calculate next position
         const nextPosition = {
             x: this.position.x + moveVector.x * GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta,
             y: this.position.y + this.velocity.y * delta,
             z: this.position.z + moveVector.z * GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta
         };
 
-        // Apply gravity if not climbing
-        if (!this.isClimbing) {
-            this.velocity.y -= GAME_CONSTANTS.PLAYER.GRAVITY * delta;
-        }
-
-        // Get player bounding box at next position
-        const playerBox = CollisionHelper.getPlayerBoundingBox(nextPosition);
+        // Create player bounding box at next position
+        const playerBox = new THREE.Box3();
+        const playerSize = new THREE.Vector3(
+            GAME_CONSTANTS.PLAYER.COLLISION.BOX_WIDTH,
+            GAME_CONSTANTS.PLAYER.COLLISION.BOX_HEIGHT,
+            GAME_CONSTANTS.PLAYER.COLLISION.BOX_DEPTH
+        );
+        playerBox.setFromCenterAndSize(
+            new THREE.Vector3(nextPosition.x, nextPosition.y, nextPosition.z),
+            playerSize
+        );
 
         // Check collisions
         let hasCollision = false;
-        window.gameInstance.buildings.forEach(building => {
+        const buildings = this.getBuildingsFromScene();
+        buildings.forEach(building => {
             if (!building) return;
 
-            const buildingBox = CollisionHelper.getBuildingBoundingBox(building);
-            if (buildingBox && CollisionHelper.checkCollision(playerBox, buildingBox)) {
+            const buildingBox = new THREE.Box3();
+            buildingBox.setFromCenterAndSize(
+                building.position,
+                new THREE.Vector3(
+                    GAME_CONSTANTS.BUILDING.WIDTH,
+                    building.height,
+                    GAME_CONSTANTS.BUILDING.DEPTH
+                )
+            );
+
+            if (playerBox.intersectsBox(buildingBox)) {
                 hasCollision = true;
                 if (!this.isClimbing || building !== this.climbingBuilding) {
-                    nextPosition.x = this.lastSafePosition.x;
-                    nextPosition.z = this.lastSafePosition.z;
+                    nextPosition.x = previousPosition.x;
+                    nextPosition.z = previousPosition.z;
                 }
             }
         });
 
-        // Ground collision check
-        if (nextPosition.y <= GAME_CONSTANTS.PLAYER.HEIGHT) {
-            nextPosition.y = GAME_CONSTANTS.PLAYER.HEIGHT;
-            this.velocity.y = 0;
-            this.isJumping = false;
-        }
-
         // Update position if no collision or climbing
         this.position = nextPosition;
 
-        // Stop climbing if we've reached the top of the building
-        if (this.isClimbing && this.climbingBuilding) {
-            if (this.position.y >= this.climbingBuilding.height) {
-                this.position.y = this.climbingBuilding.height;
-                this.velocity.y = 0;
-            }
+        // Keep y position constant when not climbing
+        if (!this.isClimbing) {
+            this.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;
         }
 
-        // Update mesh
-        this.mesh.position.set(this.position.x, this.position.y, this.position.z);
+        // Update mesh position and rotation
+        this.mesh.position.copy(this.position);
         this.mesh.rotation.y = this.rotation;
 
-        // Update debug visualization if enabled
+        // Update debug visualization
         if (GAME_CONSTANTS.PLAYER.COLLISION.DEBUG) {
             this.updateDebugBox(playerBox);
         }
