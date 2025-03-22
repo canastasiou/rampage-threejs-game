@@ -26,9 +26,9 @@ const GAME_CONSTANTS = {
         CLIMBING_SPEED: 0.3,
         CLIMBING_CHECK_DISTANCE: 3,
         COLLISION: {
-            BOX_WIDTH: 10,      // Slightly wider than player model
-            BOX_HEIGHT: 16,     // Same as player height
-            BOX_DEPTH: 8,       // Slightly deeper than player model
+            BOX_WIDTH: 14,      // Increased from 10 to accommodate arms
+            BOX_HEIGHT: 16,     // Kept the same
+            BOX_DEPTH: 8,       // Kept the same
             DETECTION_MARGIN: 1, // Extra margin for collision detection
             DEBUG: true         // Set to true to see collision boxes
         },
@@ -60,9 +60,11 @@ const GAME_CONSTANTS = {
         DIVISIONS: 10
     },
     WORLD: {
-        SIZE: 500,            // Size of the game plane
-        BUILDING_SPREAD: 150, // How far buildings can spawn from center
-        BUILDING_COUNT: 20    // Number of buildings to create
+        SIZE: 5000,           // Reduced from 50000 to 5000
+        MIN_BUILDING_DISTANCE: 100,  // Minimum distance between buildings
+        BUILDING_DENSITY: 0.00004,    // Buildings per square unit
+        BUILDING_SPREAD: 150, // This won't be needed anymore
+        BUILDING_COUNT: 20    // This will be determined by buildings config
     },
     RENDERER: {
         SHADOW_MAP_SIZE: 512,  // Reduced for better performance

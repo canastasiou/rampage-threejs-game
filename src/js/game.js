@@ -8,22 +8,54 @@ class Game {
     }
 
     init() {
+        // Calculate building count based on world size and density
+        const worldArea = GAME_CONSTANTS.WORLD.SIZE * GAME_CONSTANTS.WORLD.SIZE;
+        const buildingCount = Math.floor(worldArea * GAME_CONSTANTS.WORLD.BUILDING_DENSITY);
+
         // Initialize instanced mesh for buildings
-        const buildingMesh = Building.initializeInstancedMesh(GAME_CONSTANTS.WORLD.BUILDING_COUNT);
+        const buildingMesh = Building.initializeInstancedMesh(buildingCount);
         gameScene.scene.add(buildingMesh);
 
-        // Create buildings in random positions
-        for (let i = 0; i < GAME_CONSTANTS.WORLD.BUILDING_COUNT; i++) {
-            const x = (Math.random() - 0.5) * GAME_CONSTANTS.WORLD.BUILDING_SPREAD * 2;
-            const z = (Math.random() - 0.5) * GAME_CONSTANTS.WORLD.BUILDING_SPREAD * 2;
-            const height = Math.random() *
-                (GAME_CONSTANTS.BUILDING.MAX_HEIGHT - GAME_CONSTANTS.BUILDING.MIN_HEIGHT) +
-                GAME_CONSTANTS.BUILDING.MIN_HEIGHT;
+        // Calculate the area where buildings can be placed
+        const spread = GAME_CONSTANTS.WORLD.SIZE * 0.4; // Use 80% of world size (40% from center)
 
-            const building = new Building(x, height, z, i);  // Pass index as last parameter
-            this.buildings.push(building);
-            building.updateMatrix(i);
+        // Create buildings with minimum distance check
+        let placedBuildings = 0;
+        let attempts = 0;
+        const maxAttempts = buildingCount * 10; // Prevent infinite loops
+
+        while (placedBuildings < buildingCount && attempts < maxAttempts) {
+            const x = (Math.random() - 0.5) * spread * 2;
+            const z = (Math.random() - 0.5) * spread * 2;
+
+            // Check distance from other buildings
+            let tooClose = false;
+            for (let building of this.buildings) {
+                const dx = x - building.position.x;
+                const dz = z - building.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+
+                if (distance < GAME_CONSTANTS.WORLD.MIN_BUILDING_DISTANCE) {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (!tooClose) {
+                const height = Math.random() *
+                    (GAME_CONSTANTS.BUILDING.MAX_HEIGHT - GAME_CONSTANTS.BUILDING.MIN_HEIGHT) +
+                    GAME_CONSTANTS.BUILDING.MIN_HEIGHT;
+
+                const building = new Building(x, height, z, placedBuildings);
+                this.buildings.push(building);
+                building.updateMatrix(placedBuildings);
+                placedBuildings++;
+            }
+
+            attempts++;
         }
+
+        console.log(`Placed ${placedBuildings} buildings in ${attempts} attempts`);
 
         // Create optimized ground plane
         const groundGeometry = new THREE.PlaneGeometry(
