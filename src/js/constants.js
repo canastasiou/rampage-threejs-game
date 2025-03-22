@@ -25,6 +25,7 @@ const GAME_CONSTANTS = {
         ATTACK_RANGE: 15,
         ATTACK_COOLDOWN: 1000, // milliseconds
         CLIMBING_SPEED: 0.3,
+        CLIMBING_CHECK_DISTANCE: 3,
         GRAVITY: 0.008,      // Reduced from 0.02 for slower fall
         JUMP_DURATION: 800,  // New constant for jump timing (milliseconds)
         COLLISION_MARGIN: 0.1,  // Small margin to prevent floating point issues

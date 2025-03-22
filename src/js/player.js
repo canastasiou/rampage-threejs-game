@@ -265,14 +265,20 @@ class Player {
             case 'f':
                 this.attack();
                 break;
-            case 'w': // Climb up
-                if (this.isClimbing) {
-                    this.velocity.y = GAME_CONSTANTS.PLAYER.CLIMBING_SPEED;
-                }
-                break;
-            case 's': // Climb down
-                if (this.isClimbing) {
-                    this.velocity.y = -GAME_CONSTANTS.PLAYER.CLIMBING_SPEED;
+            case 'w':
+            case 's':
+                // Check if we can start climbing
+                const hitBox = this.getClimbingHitbox();
+                const nearbyBuildings = this.checkBuildingCollisions(hitBox);
+                console.log(nearbyBuildings);
+                if (nearbyBuildings.length > 0) {
+                    this.isClimbing = true;
+                    this.climbingBuilding = nearbyBuildings[0];
+
+                    // Set climbing velocity based on key
+                    this.velocity.y = event.key === 'w' ?
+                        GAME_CONSTANTS.PLAYER.CLIMBING_SPEED :
+                        -GAME_CONSTANTS.PLAYER.CLIMBING_SPEED;
                 }
                 break;
         }
@@ -311,17 +317,35 @@ class Player {
         this.isAttacking = true;
         this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN;
 
-        // Check for nearby buildings
-        const buildingsHit = this.checkBuildingCollisions(this.getAttackHitbox());
+        // Visual feedback for attack
+        const attackEffect = new THREE.Mesh(
+            new THREE.BoxGeometry(10, 10, 10),
+            new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                transparent: true,
+                opacity: 0.3
+            })
+        );
 
+        // Position attack effect in front of player
+        const forward = new THREE.Vector3(
+            Math.sin(this.rotation),
+            0,
+            Math.cos(this.rotation)
+        );
+        attackEffect.position.copy(this.position).add(forward.multiplyScalar(10));
+
+        this.mesh.add(attackEffect);
+
+        // Remove effect after animation
+        setTimeout(() => {
+            this.mesh.remove(attackEffect);
+        }, 200);
+
+        // Check for building damage
+        const buildingsHit = this.checkBuildingCollisions(this.getAttackHitbox());
         buildingsHit.forEach(building => {
-            const damage = GAME_CONSTANTS.PLAYER.ATTACK_DAMAGE;
-            const destroyed = building.takeDamage(damage, this.position);
-            if (destroyed) {
-                window.gameInstance.updateScore(GAME_CONSTANTS.GAME.SCORE.BUILDING_DESTROY);
-            } else {
-                window.gameInstance.updateScore(GAME_CONSTANTS.GAME.SCORE.DAMAGE_BONUS);
-            }
+            building.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK_DAMAGE, this.position);
         });
 
         // Reset attack state after cooldown
@@ -337,11 +361,28 @@ class Player {
         return hitBox;
     }
 
+    getClimbingHitbox() {
+        const hitBox = new THREE.Box3().setFromObject(this.mesh);
+        // Create a narrower but deeper detection box in front of the player
+        const forward = new THREE.Vector3(
+            Math.sin(this.rotation),
+            0,
+            Math.cos(this.rotation)
+        );
+
+        hitBox.min.add(forward.multiplyScalar(2));
+        hitBox.max.add(forward.multiplyScalar(2));
+        hitBox.expandByScalar(2); // Small margin for easier detection
+
+        return hitBox;
+    }
+
     checkBuildingCollisions(hitBox) {
         const buildings = [];
         const buildingsInScene = this.getBuildingsFromScene();
 
         buildingsInScene.forEach(building => {
+            console.log(building.instancedMesh);
             if (building && building.instancedMesh) {
                 // For instanced meshes, we need to calculate the world position
                 const position = new THREE.Vector3();
@@ -366,20 +407,23 @@ class Player {
                 if (hitBox.intersectsBox(buildingBox)) {
                     buildings.push(building);
 
-                    // Check if we should start climbing
-                    if (!this.isClimbing) {
-                        const playerFront = new THREE.Vector3(
-                            this.position.x + Math.sin(this.rotation) * 5,
-                            this.position.y,
-                            this.position.z + Math.cos(this.rotation) * 5
-                        );
+                    // Improve climbing detection
+                    const playerForward = new THREE.Vector3(
+                        Math.sin(this.rotation),
+                        0,
+                        Math.cos(this.rotation)
+                    );
 
-                        if (buildingBox.containsPoint(playerFront)) {
-                            this.isClimbing = true;
-                            this.velocity.y = 0; // Stop falling
-                            this.position.x = position.x - Math.sin(this.rotation) * (GAME_CONSTANTS.BUILDING.WIDTH/2 + 2);
-                            this.position.z = position.z - Math.cos(this.rotation) * (GAME_CONSTANTS.BUILDING.DEPTH/2 + 2);
-                        }
+                    const toBuilding = new THREE.Vector3().subVectors(position, this.position).normalize();
+                    const dot = playerForward.dot(toBuilding);
+
+                    // Player is facing the building (within 45 degrees)
+                    if (dot > 0.7) {
+                        this.isClimbing = true;
+                        this.climbingBuilding = building;
+                        // Snap to building surface
+                        this.position.x = position.x - playerForward.x * (GAME_CONSTANTS.BUILDING.WIDTH/2 + 2);
+                        this.position.z = position.z - playerForward.z * (GAME_CONSTANTS.BUILDING.DEPTH/2 + 2);
                     }
                 }
             }
@@ -455,6 +499,14 @@ class Player {
 
         // Update position if no collision or climbing
         this.position = nextPosition;
+
+        // Stop climbing if we've reached the top of the building
+        if (this.isClimbing && this.climbingBuilding) {
+            if (this.position.y >= this.climbingBuilding.height) {
+                this.position.y = this.climbingBuilding.height;
+                this.velocity.y = 0;
+            }
+        }
 
         // Update mesh
         this.mesh.position.set(this.position.x, this.position.y, this.position.z);

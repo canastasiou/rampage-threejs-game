@@ -65,10 +65,24 @@ class Building {
 
     takeDamage(amount, hitPoint) {
         this.health -= amount;
+
+        // Visual feedback for damage
+        const damageColor = new THREE.Color(0xff0000);
+        Building.instancedMesh.setColorAt(this.index, damageColor);
+        Building.instancedMesh.instanceColor.needsUpdate = true;
+
+        // Reset color after a short delay
+        setTimeout(() => {
+            const normalColor = new THREE.Color(0x808080);
+            Building.instancedMesh.setColorAt(this.index, normalColor);
+            Building.instancedMesh.instanceColor.needsUpdate = true;
+        }, 200);
+
         if (this.health <= 0) {
             return this.destroy();
         }
-        this.showDamage(hitPoint);
+
+        return false;
     }
 
     showDamage(hitPoint) {
