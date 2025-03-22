@@ -1,5 +1,6 @@
 class Game {
-    constructor() {
+    constructor(scene) {
+        this.scene = scene;
         this.score = 0;
         this.buildings = [];
         this.enemies = [];
@@ -14,7 +15,7 @@ class Game {
 
         // Initialize instanced mesh for buildings
         const buildingMesh = Building.initializeInstancedMesh(buildingCount);
-        gameScene.scene.add(buildingMesh);
+        this.scene.scene.add(buildingMesh);
 
         // Calculate the area where buildings can be placed
         const spread = GAME_CONSTANTS.WORLD.SIZE * 0.4; // Use 80% of world size (40% from center)
@@ -71,7 +72,22 @@ class Game {
         this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
         this.ground.rotation.x = -Math.PI / 2;
         this.ground.receiveShadow = true;
-        gameScene.scene.add(this.ground);
+        this.scene.scene.add(this.ground);
+
+        // Add world boundary visualization
+        const boundaryMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+        const boundaryGeometry = new THREE.BufferGeometry();
+        const halfSize = GAME_CONSTANTS.WORLD.SIZE / 2;
+        const boundaryPoints = [
+            new THREE.Vector3(-halfSize, 0, -halfSize),
+            new THREE.Vector3(halfSize, 0, -halfSize),
+            new THREE.Vector3(halfSize, 0, halfSize),
+            new THREE.Vector3(-halfSize, 0, halfSize),
+            new THREE.Vector3(-halfSize, 0, -halfSize)
+        ];
+        boundaryGeometry.setFromPoints(boundaryPoints);
+        const boundaryLine = new THREE.Line(boundaryGeometry, boundaryMaterial);
+        this.scene.scene.add(boundaryLine);
 
         this.setupGameLoop();
     }

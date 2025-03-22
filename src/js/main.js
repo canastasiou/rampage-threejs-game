@@ -3,7 +3,7 @@ let lastTime = 0;
 
 function init() {
     gameScene = new GameScene();
-    game = new Game();
+    game = new Game(gameScene);
     modal = new Modal();
 
     // Initialize game with buildings

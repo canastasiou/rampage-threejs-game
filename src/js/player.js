@@ -441,21 +441,35 @@ class Player {
             z: this.position.z
         };
 
-        // Update rotation
+        // Update rotation and calculate next position
         this.rotation += this.velocity.rotation * delta;
 
         // Calculate movement
         const moveVector = new THREE.Vector3(0, 0, this.velocity.z);
         moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
 
-        // Calculate next position
         const nextPosition = {
             x: this.position.x + moveVector.x * GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta,
             y: this.position.y + this.velocity.y * delta,
             z: this.position.z + moveVector.z * GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta
         };
 
-        // Create player bounding box at next position
+        // Check world boundaries
+        const halfWorldSize = GAME_CONSTANTS.WORLD.SIZE / 2;
+        const playerHalfWidth = GAME_CONSTANTS.PLAYER.COLLISION.BOX_WIDTH / 2;
+        const playerHalfDepth = GAME_CONSTANTS.PLAYER.COLLISION.BOX_DEPTH / 2;
+
+        // X-axis boundary check with debug logging
+        if (Math.abs(nextPosition.x) + playerHalfWidth > halfWorldSize) {
+            nextPosition.x = Math.sign(nextPosition.x) * (halfWorldSize - playerHalfWidth);
+        }
+
+        // Z-axis boundary check with debug logging
+        if (Math.abs(nextPosition.z) + playerHalfDepth > halfWorldSize) {
+            nextPosition.z = Math.sign(nextPosition.z) * (halfWorldSize - playerHalfDepth);
+        }
+
+        // Create player bounding box for building collision detection
         const playerBox = new THREE.Box3();
         const playerSize = new THREE.Vector3(
             GAME_CONSTANTS.PLAYER.COLLISION.BOX_WIDTH,
@@ -467,7 +481,7 @@ class Player {
             playerSize
         );
 
-        // Check collisions
+        // Check building collisions
         let hasCollision = false;
         const buildings = this.getBuildingsFromScene();
         buildings.forEach(building => {
