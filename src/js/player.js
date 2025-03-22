@@ -350,17 +350,29 @@ class Player {
     }
 
     getClimbingHitbox() {
-        const hitBox = new THREE.Box3().setFromObject(this.mesh);
-        // Create a narrower but deeper detection box in front of the player
         const forward = new THREE.Vector3(
-            Math.sin(this.rotation),
+            -Math.sin(this.rotation), // flipped sign
             0,
-            Math.cos(this.rotation)
+            -Math.cos(this.rotation)
+        ).normalize();
+
+        const boxCenter = new THREE.Vector3(
+            this.position.x + forward.x * 8, // 8 units in front
+            this.position.y,
+            this.position.z + forward.z * 8
         );
 
-        hitBox.min.add(forward.multiplyScalar(2));
-        hitBox.max.add(forward.multiplyScalar(2));
-        hitBox.expandByScalar(2); // Small margin for easier detection
+        const boxSize = new THREE.Vector3(10, 20, 10); // Size of the hitbox
+
+        const hitBox = new THREE.Box3();
+        hitBox.setFromCenterAndSize(boxCenter, boxSize);
+
+        // Debug view (optional)
+        if (GAME_CONSTANTS.PLAYER.COLLISION.DEBUG) {
+            const debugBox = CollisionHelper.createDebugBox(hitBox, 0x00ff00);
+            this.mesh.add(debugBox);
+            setTimeout(() => this.mesh.remove(debugBox), 100);
+        }
 
         return hitBox;
     }
@@ -370,49 +382,39 @@ class Player {
         const buildingsInScene = this.getBuildingsFromScene();
 
         buildingsInScene.forEach(building => {
-            console.log(building.instancedMesh);
-            if (building && building.instancedMesh) {
-                // For instanced meshes, we need to calculate the world position
-                const position = new THREE.Vector3();
-                const scale = new THREE.Vector3();
-                const matrix = new THREE.Matrix4();
+            if (!building) return;
 
-                // Get the instance matrix for this building
-                building.instancedMesh.getMatrixAt(building.index, matrix);
-                matrix.decompose(position, new THREE.Quaternion(), scale);
+            // Calculate bounding box from building's position and height
+            const buildingBox = new THREE.Box3();
+            buildingBox.setFromCenterAndSize(
+                building.position,
+                new THREE.Vector3(
+                    GAME_CONSTANTS.BUILDING.WIDTH,
+                    building.height,
+                    GAME_CONSTANTS.BUILDING.DEPTH
+                )
+            );
 
-                // Create a box for this building instance
-                const buildingBox = new THREE.Box3();
-                buildingBox.setFromCenterAndSize(
-                    position,
-                    new THREE.Vector3(
-                        GAME_CONSTANTS.BUILDING.WIDTH * scale.x,
-                        building.height * scale.y,
-                        GAME_CONSTANTS.BUILDING.DEPTH * scale.z
-                    )
+            if (hitBox.intersectsBox(buildingBox)) {
+                buildings.push(building);
+
+                // Improve climbing detection
+                const playerForward = new THREE.Vector3(
+                    Math.sin(this.rotation),
+                    0,
+                    Math.cos(this.rotation)
                 );
 
-                if (hitBox.intersectsBox(buildingBox)) {
-                    buildings.push(building);
+                const toBuilding = new THREE.Vector3().subVectors(building.position, this.position).normalize();
+                const dot = playerForward.dot(toBuilding);
 
-                    // Improve climbing detection
-                    const playerForward = new THREE.Vector3(
-                        Math.sin(this.rotation),
-                        0,
-                        Math.cos(this.rotation)
-                    );
+                if (dot > 0.7) { // Player is facing the building
+                    this.isClimbing = true;
+                    this.climbingBuilding = building;
 
-                    const toBuilding = new THREE.Vector3().subVectors(position, this.position).normalize();
-                    const dot = playerForward.dot(toBuilding);
-
-                    // Player is facing the building (within 45 degrees)
-                    if (dot > 0.7) {
-                        this.isClimbing = true;
-                        this.climbingBuilding = building;
-                        // Snap to building surface
-                        this.position.x = position.x - playerForward.x * (GAME_CONSTANTS.BUILDING.WIDTH/2 + 2);
-                        this.position.z = position.z - playerForward.z * (GAME_CONSTANTS.BUILDING.DEPTH/2 + 2);
-                    }
+                    // Snap to surface
+                    this.position.x = building.position.x - playerForward.x * (GAME_CONSTANTS.BUILDING.WIDTH / 2 + 2);
+                    this.position.z = building.position.z - playerForward.z * (GAME_CONSTANTS.BUILDING.DEPTH / 2 + 2);
                 }
             }
         });

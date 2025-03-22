@@ -1,7 +1,7 @@
 const GAME_CONSTANTS = {
     BUILDING: {
-        MIN_HEIGHT: 30,
-        MAX_HEIGHT: 60,
+        MIN_HEIGHT: 16 * 3,  // 3x player height
+        MAX_HEIGHT: 16 * 6,  // 6x player height
         WIDTH: 20,
         DEPTH: 20,
         SEGMENTS: 6,
