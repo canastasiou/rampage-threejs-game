@@ -15,6 +15,7 @@ function init() {
         button.addEventListener('click', () => {
             const monsterType = button.dataset.monster;
             player = new Player(monsterType);
+            window.player = player;
             gameScene.scene.add(player.mesh);
             modal.hide();
             animate();

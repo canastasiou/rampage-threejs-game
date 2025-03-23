@@ -49,7 +49,7 @@ class Player {
         shadowCatcher.receiveShadow = true;
         group.add(shadowCatcher);
 
-        switch(this.type) {
+        switch (this.type) {
             case 'george':
                 return this.createGorilla(group);
             case 'lizzie':
@@ -251,7 +251,7 @@ class Player {
 
 
     handleKeyDown(event) {
-        switch(event.key) {
+        switch (event.key) {
             case 'ArrowLeft':
             case 'ArrowRight':
             case 'ArrowUp':
@@ -261,7 +261,7 @@ class Player {
                 break;
         }
 
-        switch(event.key) {
+        switch (event.key) {
             case 'ArrowLeft':
                 if (!this.isLatched && !this.isClimbing)
                     this.velocity.rotation = GAME_CONSTANTS.PLAYER.ROTATION_SPEED;
@@ -317,7 +317,7 @@ class Player {
 
     handleKeyUp(event) {
         if (this.ignoreInput) return;
-        switch(event.key) {
+        switch (event.key) {
             case 'ArrowUp':
             case 'ArrowDown':
                 this.velocity.z = 0;
@@ -380,9 +380,33 @@ class Player {
     }
 
     getAttackHitbox() {
-        const hitBox = new THREE.Box3().setFromObject(this.mesh);
-        hitBox.expandByScalar(GAME_CONSTANTS.PLAYER.ATTACK_RANGE);
-        return hitBox;
+        const forward = new THREE.Vector3(
+            -Math.sin(this.rotation), // 🔁 negative because mesh is rotated 180°
+            0,
+            -Math.cos(this.rotation)
+        ).normalize();
+
+        // Attack box center is 10 units in front of the player
+        const center = new THREE.Vector3(
+            this.position.x + forward.x * 10,
+            this.position.y,
+            this.position.z + forward.z * 10
+        );
+
+        // Attack box size (adjust as needed)
+        const size = new THREE.Vector3(14, 16, 14); // Width, Height, Depth
+
+        const attackBox = new THREE.Box3();
+        attackBox.setFromCenterAndSize(center, size);
+
+        // Optional: visualize for debugging
+        if (GAME_CONSTANTS.PLAYER.COLLISION.DEBUG) {
+            const debug = CollisionHelper.createDebugBox(attackBox, 0x00ff00);
+            this.mesh.add(debug);
+            setTimeout(() => this.mesh.remove(debug), 200);
+        }
+
+        return attackBox;
     }
 
     getClimbingHitbox() {
@@ -407,7 +431,7 @@ class Player {
         const buildingsInScene = this.getBuildingsFromScene();
 
         buildingsInScene.forEach(building => {
-            if (building) {
+            if (building && !building.destroyed) {
                 const buildingBox = new THREE.Box3();
                 buildingBox.setFromCenterAndSize(
                     building.position,
@@ -419,7 +443,7 @@ class Player {
                 );
 
                 const distance = new THREE.Vector3(this.position.x, building.position.y, this.position.z)
-                                          .distanceTo(building.position);
+                    .distanceTo(building.position);
 
                 distances.push(distance);
 
@@ -514,7 +538,7 @@ class Player {
         let hasCollision = false;
         const buildings = this.getBuildingsFromScene();
         buildings.forEach(building => {
-            if (!building) return;
+            if (!building || building.destroyed) return;
 
             const buildingBox = new THREE.Box3();
             buildingBox.setFromCenterAndSize(
@@ -538,23 +562,23 @@ class Player {
         // Update position if no collision or climbing
         this.position = nextPosition;
 
-// Complete climbing to midpoint
-if (this.isClimbing && this.latchTargetY !== null) {
-    if (this.position.y >= this.latchTargetY) {
-        this.position.y = this.latchTargetY;
-        this.velocity.y = 0;
-        this.isClimbing = false;
-        this.isLatched = true;
-        this.latchTargetY = null;
-    }
-}
+        // Complete climbing to midpoint
+        if (this.isClimbing && this.latchTargetY !== null) {
+            if (this.position.y >= this.latchTargetY) {
+                this.position.y = this.latchTargetY;
+                this.velocity.y = 0;
+                this.isClimbing = false;
+                this.isLatched = true;
+                this.latchTargetY = null;
+            }
+        }
 
-// Prevent movement while latched
-if (this.isLatched || this.isClimbing) {
-    this.velocity.x = 0;
-    this.velocity.z = 0;
-    this.velocity.rotation = 0;
-}
+        // Prevent movement while latched
+        if (this.isLatched || this.isClimbing) {
+            this.velocity.x = 0;
+            this.velocity.z = 0;
+            this.velocity.rotation = 0;
+        }
 
 
         // Keep y position constant when not climbing

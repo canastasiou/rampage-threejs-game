@@ -104,8 +104,28 @@ class Building {
     }
 
     destroy() {
-        // Add destruction animation and debris
-        this.createDebris();
-        return true; // Building destroyed
+        if (this.destroyed) return false;
+        this.destroyed = true;
+
+        // Scale instance to zero to visually remove it
+        const dummy = new THREE.Object3D();
+        dummy.position.set(0, 0, 0);
+        dummy.scale.set(0, 0, 0);
+        dummy.updateMatrix();
+
+        Building.instancedMesh.setMatrixAt(this.index, dummy.matrix);
+        Building.instancedMesh.instanceMatrix.needsUpdate = true;
+
+        // Unlatch player if this building is being climbed
+        if (window.player && window.player.climbingBuilding === this) {
+            window.player.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;
+            window.player.velocity.y = 0;
+            window.player.isClimbing = false;
+            window.player.isLatched = false;
+            window.player.ignoreInput = false;
+            window.player.climbingBuilding = null;
+        }
+
+        return true;
     }
 }
