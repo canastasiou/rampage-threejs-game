@@ -42,6 +42,34 @@ class GameScene {
 
         document.getElementById('game-container').appendChild(this.renderer.domElement);
 
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const canvas = this.renderer.domElement;
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, this.camera);
+
+            const intersects = raycaster.intersectObject(Building.getInstancedMesh());
+
+            if (intersects.length > 0 && player) {
+                const instanceId = intersects[0].instanceId;
+                const building = game.buildings[instanceId];
+
+                const distance = building.position.distanceTo(new THREE.Vector3(
+                    player.position.x,
+                    building.position.y,
+                    player.position.z
+                ));
+
+                console.log(`Distance to building [${instanceId}]: ${distance.toFixed(2)}`);
+                showDebugDistance(`Distance to building: ${distance.toFixed(2)}`);
+            }
+        });
+
         this.setupLights();
         // Remove or comment out the old setupCamera method
         // this.setupCamera();

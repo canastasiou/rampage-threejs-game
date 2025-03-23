@@ -38,4 +38,9 @@ function animate(currentTime = 0) {
     gameScene.update(player);
 }
 
+function showDebugDistance(text) {
+    const div = document.getElementById('debug-info');
+    div.textContent = text;
+}
+
 init();

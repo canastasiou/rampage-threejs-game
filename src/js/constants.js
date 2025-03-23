@@ -1,7 +1,7 @@
 const GAME_CONSTANTS = {
     BUILDING: {
-        MIN_HEIGHT: 16 * 3,  // 3x player height
-        MAX_HEIGHT: 16 * 6,  // 6x player height
+        MIN_HEIGHT: 48,  // 3x player height
+        MAX_HEIGHT: 96,  // 6x player height
         WIDTH: 20,
         DEPTH: 20,
         SEGMENTS: 6,
@@ -24,7 +24,7 @@ const GAME_CONSTANTS = {
         ATTACK_RANGE: 15,
         ATTACK_COOLDOWN: 1000, // milliseconds
         CLIMBING_SPEED: 0.3,
-        CLIMBING_CHECK_DISTANCE: 3,
+        CLIMBING_CHECK_DISTANCE: 25,
         COLLISION: {
             BOX_WIDTH: 14,      // Increased from 10 to accommodate arms
             BOX_HEIGHT: 16,     // Kept the same
