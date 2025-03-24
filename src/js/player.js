@@ -294,10 +294,6 @@ class Player {
                         this.climbingBuilding = building;
                         this.latchTargetY = targetY;
 
-                        const forward = new THREE.Vector3(-Math.sin(this.rotation), 0, -Math.cos(this.rotation));
-                        this.position.x = building.position.x - forward.x * (GAME_CONSTANTS.BUILDING.WIDTH / 2 + 2);
-                        this.position.z = building.position.z - forward.z * (GAME_CONSTANTS.BUILDING.DEPTH / 2 + 2);
-
                         this.velocity = { x: 0, y: 0.5, z: 0, rotation: 0 };
                     }
                 }
@@ -341,30 +337,25 @@ class Player {
         this.isAttacking = true;
         this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN;
 
-        // Visual feedback for attack
+        // Simple attack effect - a flash in front of the player
         const attackEffect = new THREE.Mesh(
-            new THREE.BoxGeometry(10, 10, 10),
+            new THREE.BoxGeometry(15, 15, 15),
             new THREE.MeshBasicMaterial({
-                color: 0xff0000,
+                color: 0xffff00,
                 transparent: true,
-                opacity: 0.3
+                opacity: 0.6
             })
         );
 
-        // Position attack effect in front of player
-        const forward = new THREE.Vector3(
-            Math.sin(this.rotation),
-            0,
-            Math.cos(this.rotation)
-        );
-        attackEffect.position.copy(this.position).add(forward.multiplyScalar(10));
-
+        // Position effect in front of player
+        const forward = this.getForwardDirection();
+        attackEffect.position.set(0, 0, -5); // Slightly in front
         this.mesh.add(attackEffect);
 
-        // Remove effect after animation
+        // Remove effect after short duration
         setTimeout(() => {
             this.mesh.remove(attackEffect);
-        }, 200);
+        }, 100);
 
         // Check for building damage
         const buildingsHit = this.checkBuildingCollisions(this.getAttackHitbox());
@@ -379,34 +370,53 @@ class Player {
         }, GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN);
     }
 
+    // Simplified attack hitbox check without visualization
     getAttackHitbox() {
-        const forward = new THREE.Vector3(
-            -Math.sin(this.rotation), // 🔁 negative because mesh is rotated 180°
-            0,
-            -Math.cos(this.rotation)
-        ).normalize();
-
-        // Attack box center is 10 units in front of the player
-        const center = new THREE.Vector3(
-            this.position.x + forward.x * 10,
-            this.position.y,
-            this.position.z + forward.z * 10
-        );
-
-        // Attack box size (adjust as needed)
-        const size = new THREE.Vector3(14, 16, 14); // Width, Height, Depth
+        const forward = this.getForwardDirection();
+        const center = new THREE.Vector3()
+            .copy(this.position)
+            .add(forward.multiplyScalar(10));
 
         const attackBox = new THREE.Box3();
-        attackBox.setFromCenterAndSize(center, size);
-
-        // Optional: visualize for debugging
-        if (GAME_CONSTANTS.PLAYER.COLLISION.DEBUG) {
-            const debug = CollisionHelper.createDebugBox(attackBox, 0x00ff00);
-            this.mesh.add(debug);
-            setTimeout(() => this.mesh.remove(debug), 200);
-        }
+        attackBox.setFromCenterAndSize(
+            center,
+            new THREE.Vector3(14, 16, 14)
+        );
 
         return attackBox;
+    }
+
+    // New helper method to ensure consistent forward direction
+    getForwardDirection() {
+        // Account for the 180° rotation of the mesh
+        return new THREE.Vector3(
+            Math.sin(this.rotation + Math.PI),
+            0,
+            Math.cos(this.rotation + Math.PI)
+        ).normalize();
+    }
+
+    // Improved debug box creation
+    createDebugBox(box, color) {
+        const size = new THREE.Vector3();
+        box.getSize(size);
+
+        const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
+        const material = new THREE.MeshBasicMaterial({
+            color: color,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.5
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+
+        // Position relative to player
+        mesh.position.copy(center.sub(this.position));
+
+        return mesh;
     }
 
     getClimbingHitbox() {

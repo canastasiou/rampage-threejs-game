@@ -21,10 +21,10 @@ const GAME_CONSTANTS = {
         ROTATION_SPEED: 0.002,  // Much slower rotation
         MOVE_SPEED: 0.5,      // Speed of forward/backward movement
         ATTACK_DAMAGE: 20,
-        ATTACK_RANGE: 15,
-        ATTACK_COOLDOWN: 1000, // milliseconds
+        ATTACK_RANGE: 35,
+        ATTACK_COOLDOWN: 300, // milliseconds
         CLIMBING_SPEED: 0.3,
-        CLIMBING_CHECK_DISTANCE: 25,
+        CLIMBING_CHECK_DISTANCE: 35,
         COLLISION: {
             BOX_WIDTH: 14,      // Increased from 10 to accommodate arms
             BOX_HEIGHT: 16,     // Kept the same
