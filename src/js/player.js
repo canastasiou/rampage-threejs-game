@@ -1,6 +1,7 @@
 class Player {
     constructor(type = 'george') {
         this.type = type;
+        this.rightArm = null;  // Reference to the arm mesh
         this.mesh = this.createPlayerMesh();
 
         // Set initial position at origin, on the ground
@@ -24,7 +25,9 @@ class Player {
         this.isLatched = false;
         this.latchTargetY = null;
         this.ignoreInput = false;
-
+        this.isAttacking = false;
+        this.attackStartTime = 0;
+        this.attackProgress = 0;
 
         // Apply initial position to mesh
         this.mesh.position.set(
@@ -37,9 +40,9 @@ class Player {
     }
 
     createPlayerMesh() {
-        const group = new THREE.Group();
+        this.mesh = new THREE.Group();
 
-        // Add an invisible platform under the character for better shadow
+        // Add shadow catcher
         const shadowCatcher = new THREE.Mesh(
             new THREE.PlaneGeometry(10, 10),
             new THREE.ShadowMaterial({ opacity: 0.3 })
@@ -47,18 +50,31 @@ class Player {
         shadowCatcher.rotation.x = -Math.PI / 2;
         shadowCatcher.position.y = -GAME_CONSTANTS.PLAYER.HEIGHT / 2;
         shadowCatcher.receiveShadow = true;
-        group.add(shadowCatcher);
+        this.mesh.add(shadowCatcher);
 
+        // Create character based on type
         switch (this.type) {
             case 'george':
-                return this.createGorilla(group);
+                this.createGorilla(this.mesh);
+                break;
             case 'lizzie':
-                return this.createLizard(group);
+                this.createLizard(this.mesh);
+                break;
             case 'ralph':
-                return this.createWolf(group);
+                this.createWolf(this.mesh);
+                break;
             default:
-                return this.createGorilla(group);
+                this.createGorilla(this.mesh);
         }
+
+        // Set initial mesh properties
+        this.mesh.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;
+        this.mesh.rotation.y = Math.PI;
+        this.mesh.castShadow = true;
+
+        console.log("Mesh: ", this.mesh);
+
+        return this.mesh;
     }
 
     createGorilla(group) {
@@ -85,9 +101,7 @@ class Player {
         leftArm.position.set(-5.5, 2, 0);
         group.add(leftArm);
 
-        const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-        rightArm.position.set(5.5, 2, 0);
-        group.add(rightArm);
+        this.createRightArm(group, armMaterial);
 
         // Legs
         const legGeometry = new THREE.BoxGeometry(3, 6, 3);
@@ -107,8 +121,6 @@ class Player {
         group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
         group.rotation.y = Math.PI; // Rotate 180 degrees
         group.castShadow = true;
-
-        return group;
     }
 
     createLizard(group) {
@@ -144,14 +156,10 @@ class Player {
         leftArm.position.set(-4, 2, 0);
         group.add(leftArm);
 
-        const rightArm = new THREE.Mesh(limbGeometry, limbMaterial);
-        rightArm.position.set(4, 2, 0);
-        group.add(rightArm);
+        this.createRightArm(group, limbMaterial);
 
         group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
         group.castShadow = true;
-
-        return group;
     }
 
     createWolf(group) {
@@ -191,9 +199,7 @@ class Player {
         leftArm.position.set(-5.5, 2, 0);
         group.add(leftArm);
 
-        const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-        rightArm.position.set(5.5, 2, 0);
-        group.add(rightArm);
+        this.createRightArm(group, armMaterial);
 
         // Legs
         const legGeometry = new THREE.BoxGeometry(3, 6, 3);
@@ -209,8 +215,14 @@ class Player {
 
         group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
         group.castShadow = true;
+    }
 
-        return group;
+    createRightArm(group, armMaterial) {
+        const rightArmGeometry = new THREE.BoxGeometry(3, 10, 3);
+        this.rightArm = new THREE.Mesh(rightArmGeometry, armMaterial);
+        this.rightArm.position.set(5.5, 2, 0);
+        group.add(this.rightArm);
+        console.log('Right arm created:', this.rightArm);
     }
 
     addFaceFeatures(head) {
@@ -332,42 +344,31 @@ class Player {
     }
 
     attack() {
-        if (this.attackCooldown > 0) return;
-
+        if (this.attackCooldown > 0 || this.isAttacking) return;
+        console.log('Attack started, rightArm:', this.rightArm);
         this.isAttacking = true;
-        this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN;
+        this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN;
+        this.attackStartTime = Date.now();
 
-        // Simple attack effect - a flash in front of the player
-        const attackEffect = new THREE.Mesh(
-            new THREE.BoxGeometry(15, 15, 15),
-            new THREE.MeshBasicMaterial({
-                color: 0xffff00,
-                transparent: true,
-                opacity: 0.6
-            })
-        );
-
-        // Position effect in front of player
-        const forward = this.getForwardDirection();
-        attackEffect.position.set(0, 0, -5); // Slightly in front
-        this.mesh.add(attackEffect);
-
-        // Remove effect after short duration
-        setTimeout(() => {
-            this.mesh.remove(attackEffect);
-        }, 100);
-
-        // Check for building damage
+        // Check for building damage immediately
         const buildingsHit = this.checkBuildingCollisions(this.getAttackHitbox());
         buildingsHit.forEach(building => {
-            building.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK_DAMAGE, this.position);
+            building.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK.DAMAGE, this.position);
         });
 
-        // Reset attack state after cooldown
+        // Reset attack state after animation completes
+        setTimeout(() => {
+            if (this.rightArm) {
+                this.rightArm.rotation.z = 0;
+            }
+        }, GAME_CONSTANTS.PLAYER.ATTACK.ANIMATION_DURATION);
+
+        // Reset attack flags after cooldown
         setTimeout(() => {
             this.isAttacking = false;
             this.attackCooldown = 0;
-        }, GAME_CONSTANTS.PLAYER.ATTACK_COOLDOWN);
+            this.attackProgress = 0;
+        }, GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN);
     }
 
     // Simplified attack hitbox check without visualization
@@ -478,8 +479,6 @@ class Player {
             }
         });
 
-        console.log(distances);
-
         if (buildings.length === 0) {
             this.isClimbing = false;
         }
@@ -545,7 +544,6 @@ class Player {
         );
 
         // Check building collisions
-        let hasCollision = false;
         const buildings = this.getBuildingsFromScene();
         buildings.forEach(building => {
             if (!building || building.destroyed) return;
@@ -561,7 +559,6 @@ class Player {
             );
 
             if (playerBox.intersectsBox(buildingBox)) {
-                hasCollision = true;
                 if (!this.isClimbing || building !== this.climbingBuilding) {
                     nextPosition.x = previousPosition.x;
                     nextPosition.z = previousPosition.z;
@@ -599,6 +596,21 @@ class Player {
         // Update mesh position and rotation
         this.mesh.position.copy(this.position);
         this.mesh.rotation.y = this.rotation;
+
+        // Update attack animation
+        if (this.isAttacking && this.rightArm) {
+            console.log('Updating attack animation, rightArm:', this.rightArm);
+            const elapsed = Date.now() - this.attackStartTime;
+            const duration = GAME_CONSTANTS.PLAYER.ATTACK.ANIMATION_DURATION;
+            const progress = Math.min(elapsed / duration, 1);
+
+            const startAngle = -Math.PI / 4;
+            const endAngle = Math.PI / 4;
+            const swingAngle = startAngle + Math.sin(progress * Math.PI) * (endAngle - startAngle);
+
+            this.rightArm.rotation.z = -swingAngle;
+            console.log('Updated arm rotation:', -swingAngle);
+        }
 
         // Update debug visualization
         if (GAME_CONSTANTS.PLAYER.COLLISION.DEBUG) {

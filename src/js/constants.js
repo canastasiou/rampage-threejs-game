@@ -32,6 +32,13 @@ const GAME_CONSTANTS = {
             DETECTION_MARGIN: 1, // Extra margin for collision detection
             DEBUG: true         // Set to true to see collision boxes
         },
+        ATTACK: {
+            DAMAGE: 20,
+            RANGE: 35,
+            COOLDOWN: 500,
+            ANIMATION_DURATION: 300,  // Increased for more visible animation
+            SWING_ANGLE: Math.PI / 2  // 90 degrees total swing
+        }
     },
     CAMERA: {
         FOV: 75,              // Increased field of view
