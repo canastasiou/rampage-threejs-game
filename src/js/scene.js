@@ -58,15 +58,20 @@ class GameScene {
             if (intersects.length > 0 && player) {
                 const instanceId = intersects[0].instanceId;
                 const building = game.buildings[instanceId];
+                const point = intersects[0].point;
 
-                const distance = building.position.distanceTo(new THREE.Vector3(
-                    player.position.x,
-                    building.position.y,
-                    player.position.z
-                ));
-
-                console.log(`Distance to building [${instanceId}]: ${distance.toFixed(2)}`);
-                showDebugDistance(`Distance to building: ${distance.toFixed(2)}`);
+                console.log('Building Debug:', {
+                    id: instanceId,
+                    position: building.position,
+                    height: building.height,
+                    distance: building.position.distanceTo(player.position),
+                    intersectPoint: point,
+                    withinRange: building.position.distanceTo(player.position) <= GAME_CONSTANTS.PLAYER.ATTACK.RANGE,
+                    rayAngle: Math.atan2(
+                        (point.x - raycaster.ray.origin.x),
+                        (point.z - raycaster.ray.origin.z)
+                    )
+                });
             }
         });
 

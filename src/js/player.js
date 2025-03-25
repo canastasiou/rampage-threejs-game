@@ -1,15 +1,20 @@
 class Player {
-    constructor(type = 'george') {
+    constructor(type = 'george', scene) {
         this.type = type;
+        this.scene = scene;
+
         this.rightArm = null;  // Reference to the arm mesh
         this.mesh = this.createPlayerMesh();
 
-        // Set initial position at origin, on the ground
-        this.position = {
-            x: 0,
-            y: GAME_CONSTANTS.PLAYER.HEIGHT, // Changed from HEIGHT/2 to HEIGHT
-            z: 0
-        };
+        // Add crosshair element for targeting
+        this.crosshairElement = document.getElementById('crosshair');
+
+        // Change position to be a Vector3
+        this.position = new THREE.Vector3(
+            0,
+            GAME_CONSTANTS.PLAYER.HEIGHT,
+            0
+        );
 
         this.velocity = { x: 0, y: 0, z: 0, rotation: 0 };
         this.direction = 1;
@@ -71,8 +76,6 @@ class Player {
         this.mesh.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;
         this.mesh.rotation.y = Math.PI;
         this.mesh.castShadow = true;
-
-        console.log("Mesh: ", this.mesh);
 
         return this.mesh;
     }
@@ -312,17 +315,14 @@ class Player {
                 break;
             case 'w':
                 if (!this.isLatched && !this.isClimbing && this.velocity.z === 0) {
-                    const hitBox = this.getClimbingHitbox();
-                    const buildings = this.checkBuildingCollisions(hitBox);
-                    if (buildings.length > 0) {
-                        const building = buildings[0];
-                        const targetY = building.position.y + building.height / 2;
-
+                    const targetedBuilding = this.getTargetedBuilding();
+                    if (targetedBuilding) {
+                        // Calculate center height of building instead of top
+                        const targetY = targetedBuilding.position.y;  // This is already the center
                         this.isClimbing = true;
                         this.ignoreInput = true;
-                        this.climbingBuilding = building;
+                        this.climbingBuilding = targetedBuilding;
                         this.latchTargetY = targetY;
-
                         this.velocity = { x: 0, y: 0.5, z: 0, rotation: 0 };
                     }
                 }
@@ -363,29 +363,29 @@ class Player {
     attack() {
         if (this.attackCooldown > 0 || this.isAttacking) return;
 
-        this.isAttacking = true;
-        this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN;
-        this.attackStartTime = Date.now();
+        const targetedBuilding = this.getTargetedBuilding();
+        if (targetedBuilding) {
+            // If we have a targeted building, we know it's in range because of getTargetedBuilding check
+            this.isAttacking = true;
+            this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN;
+            this.attackStartTime = Date.now();
 
-        // Check for building damage immediately
-        const buildingsHit = this.checkBuildingCollisions(this.getAttackHitbox());
-        buildingsHit.forEach(building => {
-            building.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK.DAMAGE, this.position);
-        });
+            targetedBuilding.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK.DAMAGE, this.position);
 
-        // Reset arm position and attack state after animation completes
-        setTimeout(() => {
-            if (this.rightArm) {
-                this.rightArm.rotation.x = 0;
-                this.isAttacking = false;
-                this.attackProgress = 0;
-            }
-        }, GAME_CONSTANTS.PLAYER.ATTACK.ANIMATION_DURATION);
+            // Reset arm position and attack state after animation completes
+            setTimeout(() => {
+                if (this.rightArm) {
+                    this.rightArm.rotation.x = 0;
+                    this.isAttacking = false;
+                    this.attackProgress = 0;
+                }
+            }, GAME_CONSTANTS.PLAYER.ATTACK.ANIMATION_DURATION);
 
-        // Reset cooldown separately
-        setTimeout(() => {
-            this.attackCooldown = 0;
-        }, GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN);
+            // Reset cooldown separately
+            setTimeout(() => {
+                this.attackCooldown = 0;
+            }, GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN);
+        }
     }
 
     // Simplified attack hitbox check without visualization
@@ -512,13 +512,59 @@ class Player {
         return window.gameInstance.buildings || [];
     }
 
+    getTargetedBuilding() {
+        const camera = this.scene.camera;
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+        // Get buildings and create collision boxes
+        const buildings = this.getBuildingsFromScene();
+        const buildingBoxes = buildings.map(building => {
+            if (!building || building.destroyed) return null;
+
+            const box = new THREE.Box3();
+            box.setFromCenterAndSize(
+                building.position,
+                new THREE.Vector3(
+                    GAME_CONSTANTS.BUILDING.WIDTH,
+                    building.height,
+                    GAME_CONSTANTS.BUILDING.DEPTH
+                )
+            );
+            return { building, box };
+        }).filter(item => item !== null);
+
+        let closestBuilding = null;
+        let closestDistance = Infinity;
+
+        buildingBoxes.forEach(({ building, box }) => {
+            if (raycaster.ray.intersectsBox(box)) {
+                // Calculate horizontal distance only
+                const distance = new THREE.Vector2(
+                    building.position.x - this.position.x,
+                    building.position.z - this.position.z
+                ).length();
+
+                // Use same distance check for both targeting and attack range
+                if (distance <= GAME_CONSTANTS.PLAYER.ATTACK.RANGE) {
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestBuilding = building;
+                    }
+                }
+            }
+        });
+
+        // Update crosshair color
+        this.crosshairElement.style.backgroundColor =
+            closestBuilding ? '#00ff00' : '#ff0000';
+
+        return closestBuilding;
+    }
+
     update(delta) {
         // Store current position for collision check
-        const previousPosition = {
-            x: this.position.x,
-            y: this.position.y,
-            z: this.position.z
-        };
+        const previousPosition = this.position.clone();
 
         // Update rotation and calculate next position
         this.rotation += this.velocity.rotation * delta;
@@ -526,12 +572,11 @@ class Player {
         // Calculate movement
         const moveVector = new THREE.Vector3(0, 0, this.velocity.z);
         moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
+        moveVector.multiplyScalar(GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta);
 
-        const nextPosition = {
-            x: this.position.x + moveVector.x * GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta,
-            y: this.position.y + this.velocity.y * delta,
-            z: this.position.z + moveVector.z * GAME_CONSTANTS.PLAYER.MOVE_SPEED * delta
-        };
+        // Calculate next position
+        const nextPosition = this.position.clone().add(moveVector);
+        nextPosition.y += this.velocity.y * delta;
 
         // Check world boundaries
         const halfWorldSize = GAME_CONSTANTS.WORLD.SIZE / 2;
@@ -582,6 +627,9 @@ class Player {
                 }
             }
         });
+
+        // Update targeted building
+        const targetedBuilding = this.getTargetedBuilding();
 
         // Update position if no collision or climbing
         this.position = nextPosition;
