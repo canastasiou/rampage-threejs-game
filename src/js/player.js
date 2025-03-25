@@ -220,9 +220,15 @@ class Player {
     createRightArm(group, armMaterial) {
         const rightArmGeometry = new THREE.BoxGeometry(3, 10, 3);
         this.rightArm = new THREE.Mesh(rightArmGeometry, armMaterial);
-        this.rightArm.position.set(5.5, 2, 0);
+
+        // Move geometry origin to top of arm (shoulder)
+        rightArmGeometry.translate(0, -5, 0);
+
+        // Position arm at shoulder height
+        this.rightArm.position.set(5.5, 7, 0);
+
+        // Add to group
         group.add(this.rightArm);
-        console.log('Right arm created:', this.rightArm);
     }
 
     addFaceFeatures(head) {
@@ -345,7 +351,7 @@ class Player {
 
     attack() {
         if (this.attackCooldown > 0 || this.isAttacking) return;
-        console.log('Attack started, rightArm:', this.rightArm);
+
         this.isAttacking = true;
         this.attackCooldown = GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN;
         this.attackStartTime = Date.now();
@@ -356,18 +362,18 @@ class Player {
             building.takeDamage(GAME_CONSTANTS.PLAYER.ATTACK.DAMAGE, this.position);
         });
 
-        // Reset attack state after animation completes
+        // Reset arm position and attack state after animation completes
         setTimeout(() => {
             if (this.rightArm) {
-                this.rightArm.rotation.z = 0;
+                this.rightArm.rotation.x = 0;
+                this.isAttacking = false;
+                this.attackProgress = 0;
             }
         }, GAME_CONSTANTS.PLAYER.ATTACK.ANIMATION_DURATION);
 
-        // Reset attack flags after cooldown
+        // Reset cooldown separately
         setTimeout(() => {
-            this.isAttacking = false;
             this.attackCooldown = 0;
-            this.attackProgress = 0;
         }, GAME_CONSTANTS.PLAYER.ATTACK.COOLDOWN);
     }
 
@@ -599,17 +605,18 @@ class Player {
 
         // Update attack animation
         if (this.isAttacking && this.rightArm) {
-            console.log('Updating attack animation, rightArm:', this.rightArm);
             const elapsed = Date.now() - this.attackStartTime;
             const duration = GAME_CONSTANTS.PLAYER.ATTACK.ANIMATION_DURATION;
             const progress = Math.min(elapsed / duration, 1);
 
-            const startAngle = -Math.PI / 4;
-            const endAngle = Math.PI / 4;
-            const swingAngle = startAngle + Math.sin(progress * Math.PI) * (endAngle - startAngle);
+            // Full animation cycle using sine, with positive rotation to swing forward
+            const swingAngle = Math.sin(progress * Math.PI) * (Math.PI / 4);
 
-            this.rightArm.rotation.z = -swingAngle;
-            console.log('Updated arm rotation:', -swingAngle);
+            // Remove the negative sign to reverse the swing direction
+            this.rightArm.rotation.x = swingAngle;
+        } else if (this.rightArm) {
+            // Ensure arm is at rest position when not attacking
+            this.rightArm.rotation.x = 0;
         }
 
         // Update debug visualization
