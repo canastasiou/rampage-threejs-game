@@ -124,41 +124,52 @@ class Player {
     }
 
     createLizard(group) {
-        // Body
+        // Body - made slightly larger to match arm scale
         const body = new THREE.Mesh(
-            new THREE.BoxGeometry(6, 12, 6),
+            new THREE.BoxGeometry(8, 12, 6),  // Wider to match arm connection
             new THREE.MeshPhongMaterial({ color: 0x228B22 })
         );
         group.add(body);
 
-        // Head (more elongated for lizard)
+        // Head (elongated for lizard look)
         const head = new THREE.Mesh(
-            new THREE.BoxGeometry(4, 4, 8),
+            new THREE.BoxGeometry(6, 5, 8),  // Adjusted proportions
             new THREE.MeshPhongMaterial({ color: 0x228B22 })
         );
         head.position.y = 8;
         group.add(head);
 
-        // Tail
+        // Tail - thicker to match new proportions
         const tail = new THREE.Mesh(
-            new THREE.BoxGeometry(2, 8, 2),
+            new THREE.BoxGeometry(3, 8, 3),
             new THREE.MeshPhongMaterial({ color: 0x228B22 })
         );
         tail.position.set(0, -6, 3);
         tail.rotation.x = Math.PI / 4;
         group.add(tail);
 
-        // Arms and legs similar to gorilla but thinner
-        const limbGeometry = new THREE.BoxGeometry(2, 8, 2);
+        // Left arm - match right arm dimensions
+        const leftArmGeometry = new THREE.BoxGeometry(3, 10, 3);
         const limbMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 });
-
-        const leftArm = new THREE.Mesh(limbGeometry, limbMaterial);
-        leftArm.position.set(-4, 2, 0);
+        const leftArm = new THREE.Mesh(leftArmGeometry, limbMaterial);
+        leftArm.position.set(-5.5, 2, 0);
         group.add(leftArm);
 
+        // Right arm created through createRightArm
         this.createRightArm(group, limbMaterial);
 
-        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;  // Changed from HEIGHT/2 to HEIGHT
+        // Add lizard legs
+        const legGeometry = new THREE.BoxGeometry(3, 6, 3);
+
+        const leftLeg = new THREE.Mesh(legGeometry, limbMaterial);
+        leftLeg.position.set(-2, -9, 0);
+        group.add(leftLeg);
+
+        const rightLeg = new THREE.Mesh(legGeometry, limbMaterial);
+        rightLeg.position.set(2, -9, 0);
+        group.add(rightLeg);
+
+        group.position.y = GAME_CONSTANTS.PLAYER.HEIGHT;
         group.castShadow = true;
     }
 
